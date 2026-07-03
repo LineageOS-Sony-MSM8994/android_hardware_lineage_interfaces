@@ -25,7 +25,7 @@ using ::android::hardware::Void;
 
 struct Radio : public V1_4::IRadio {
   public:
-    Radio(sp<V1_0::IRadio> realRadio);
+    Radio(sp<V1_0::IRadio> realRadio, int slotId);
 
     // Methods from ::android::hardware::radio::V1_0::IRadio follow.
     Return<void> setResponseFunctions(const sp<V1_0::IRadioResponse>& radioResponse,
@@ -260,6 +260,7 @@ struct Radio : public V1_4::IRadio {
     Return<void> getSignalStrength_1_4(int32_t serial) override;
 
   private:
+    int mSlotId = -1;
     sp<V1_0::IRadio> mRealRadio;
     sp<RadioResponse> mRadioResponse = new RadioResponse();
     sp<RadioIndication> mRadioIndication = new RadioIndication();

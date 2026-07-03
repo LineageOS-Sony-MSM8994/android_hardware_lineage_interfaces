@@ -57,7 +57,12 @@
 
 namespace android::hardware::radio::implementation {
 
-Radio::Radio(sp<V1_0::IRadio> realRadio) : mRealRadio(realRadio) {}
+Radio::Radio(sp<V1_0::IRadio> realRadio, int slotId) : mSlotId(slotId), mRealRadio(realRadio) {
+    // Tag the response with our slot index and wire the sibling indication so it can inject the
+    // per-slot snooped ICCID and trigger a card-status re-poll.
+    mRadioResponse->mSlotId = slotId;
+    mRadioResponse->mIndication = mRadioIndication;
+}
 
 // Methods from ::android::hardware::radio::V1_0::IRadio follow.
 Return<void> Radio::setResponseFunctions(const sp<V1_0::IRadioResponse>& radioResponse,
@@ -185,6 +190,12 @@ Return<void> Radio::setupDataCall(int32_t serial, V1_0::RadioTechnology radioTec
 }
 
 Return<void> Radio::iccIOForApp(int32_t serial, const V1_0::IccIo& iccIo) {
+    // Record serials of EF_ICCID (0x2FE2) SIM_IO so the matching response can be snooped; the
+    // length gate later ignores the short GET_RESPONSE FCP and keeps only the full ICCID.
+    if (iccIo.fileId == 0x2FE2 /* EF_ICCID */) {
+        std::lock_guard<std::mutex> l(mRadioResponse->mIccidLock);
+        mRadioResponse->mPendingIccidSerials.insert(serial);
+    }
     WRAP_V1_0_CALL(iccIOForApp, serial, iccIo);
 }
 

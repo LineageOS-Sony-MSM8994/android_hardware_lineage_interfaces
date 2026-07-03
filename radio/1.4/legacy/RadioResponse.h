@@ -10,6 +10,12 @@
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 
+#include "RadioIndication.h"
+
+#include <mutex>
+#include <set>
+#include <string>
+
 namespace android::hardware::radio::implementation {
 
 using ::android::sp;
@@ -24,6 +30,15 @@ struct RadioResponse : public V1_4::IRadioResponse {
     sp<V1_4::IRadioResponse> mRealRadioResponse;
     V1_0::RadioTechnology mRat = V1_0::RadioTechnology::UNKNOWN;
     bool mDataRoaming = false;
+    // Per-slot ICCID cache: V1_0::CardStatus has no iccid, so we snoop it from the EF_ICCID (0x2FE2)
+    // READ_BINARY flowing through this wrapper and inject it (each slot has its own RadioResponse).
+    int mSlotId = -1;
+    std::string mCachedIccid;
+    std::mutex mIccidLock;
+    std::set<int32_t> mPendingIccidSerials;
+    // Sibling RadioIndication (set by Radio ctor): used to fire simStatusChanged when a new iccid is
+    // cached, forcing the framework to re-poll getIccCardStatus and pick up the per-slot iccid.
+    sp<RadioIndication> mIndication;
     // Methods from ::android::hardware::radio::V1_0::IRadioResponse follow.
     Return<void> getIccCardStatusResponse(const V1_0::RadioResponseInfo& info,
                                           const V1_0::CardStatus& cardStatus) override;
