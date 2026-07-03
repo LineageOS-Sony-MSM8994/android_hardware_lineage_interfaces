@@ -15,6 +15,16 @@ using ::android::hardware::hidl_vec;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
 
+// Swallow transport errors when forwarding to the framework callback: an unchecked
+// Return<void> with DEAD_OBJECT (client already died) would abort this HAL process and
+// drop its IRadio registration. Mark it checked and hand back a clean Void().
+static inline Return<void> fwdReturn(Return<void>&& ret) {
+    if (!ret.isOk()) {
+        // framework client (com.android.phone) is gone; swallow the transport error
+    }
+    return Void();
+}
+
 #define GSMBITS (V1_0::RadioAccessFamily::GSM | V1_0::RadioAccessFamily::GPRS | V1_0::RadioAccessFamily::EDGE)
 #define CDMABITS (V1_0::RadioAccessFamily::IS95A | V1_0::RadioAccessFamily::IS95B | V1_0::RadioAccessFamily::ONE_X_RTT)
 #define EVDOBITS (V1_0::RadioAccessFamily::EVDO_0 | V1_0::RadioAccessFamily::EVDO_A | V1_0::RadioAccessFamily::EVDO_B | V1_0::RadioAccessFamily::EHRPD)
