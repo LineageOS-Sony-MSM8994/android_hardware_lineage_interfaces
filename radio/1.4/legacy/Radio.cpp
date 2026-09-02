@@ -811,16 +811,14 @@ Return<void> Radio::setDataProfile_1_4(int32_t serial,
                                        const hidl_vec<V1_4::DataProfileInfo>& profiles) {
     MAYBE_WRAP_V1_4_CALL(setDataProfile_1_4, serial, profiles);
 
+    // Filtering on persistent left the RIL with no profiles and the serial unanswered.
     std::vector<V1_0::DataProfileInfo> legacyProfiles;
-    for(const V1_4::DataProfileInfo &profile : profiles){
-        if(profile.persistent)
-            legacyProfiles.push_back(Get1_0DataProfileInfo(profile));
+    legacyProfiles.reserve(profiles.size());
+    for (const V1_4::DataProfileInfo& profile : profiles) {
+        legacyProfiles.push_back(Get1_0DataProfileInfo(profile));
     }
 
-    if(legacyProfiles.size())
-        WRAP_V1_0_CALL(setDataProfile, serial, hidl_vec(legacyProfiles), mRadioResponse->mDataRoaming);
-
-    return Void();
+    WRAP_V1_0_CALL(setDataProfile, serial, hidl_vec(legacyProfiles), mRadioResponse->mDataRoaming);
 }
 
 Return<void> Radio::emergencyDial(int32_t serial, const V1_0::Dial& dialInfo,
